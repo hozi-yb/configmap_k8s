@@ -53,6 +53,7 @@ jobs:
           echo ${{ secrets.USER_PASSWORD }}
 
   My-Deploy-Job2: 
+    needs: My-Deploy-Job
     name: 배포 작업
     runs-on: self-hosted
     
