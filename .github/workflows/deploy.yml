@@ -9,6 +9,13 @@ on:
     branches:
       - main
 
+# 안에서 사용할 수 있는 환경변수 선언할 수 있다.
+# on: 과 jobs: 사이에 선언해주면 된다.
+env:
+  NAME: kosa
+  USERNAME: kosa
+
+
 # 하나의 Workflow는 1개 이상의 Job으로 구성된다. 
 # 여러 Job은 기본적으로 병렬적으로 수행된다.
 jobs: 
@@ -32,3 +39,9 @@ jobs:
 
       - name: 환경변수 모두 출력
         run: env
+
+      - name: 환경변수 NAME 출력
+        run: echo ${{ env.NAME }}
+        
+      - name: 환경변수 USERNAME 출력
+        run: echo ${{ env.USERNAME }}
