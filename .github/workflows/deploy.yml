@@ -1,0 +1,79 @@
+name: Deploy to Kubernetes Cluster
+
+# 1. 트리거 조건 설정: main 브랜치에 push 이벤트가 발생했을 때 실행
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # 수동 실행을 위한 설정
+
+# 2. 전역 환경 변수 설정 (사용자 정보로 변경 필요)
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }} # Docker Hub ID
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} # Docker Hub ID
+  IMAGE_NAME: nginx:latest # 빌드할 애플리케이션 이름
+  K8S_NAMESPACE: default # 배포할 쿠버네티스 네임스페이스 (필요 시 변경)
+  K8S_HOST: ${{ secrets.K8S_HOST }} # K8S API 서버 주소 (예: https://...)
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      # =======================================================
+      # 1단계: 도커 이미지 빌드 및 레지스트리 로그인
+      # =======================================================
+      - name: Docker 빌드 환경 설정
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker 레지스트리 로그인
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }} # Docker Hub Password/Token
+
+      - name: Docker 이미지 빌드 및 푸시
+        id: docker_build
+        uses: docker/build-and-push-action@v5
+        with:
+          context: . # Dockerfile이 있는 경로
+          push: true
+          tags: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} 
+          # 태그 예시: docker.io/myid/my-app:git_commit_hash
+          
+      # =======================================================
+      # 2단계: 쿠버네티스 배포 준비
+      # =======================================================
+      - name: kubectl 설치
+        uses: azure/setup-kubectl@v4
+        id: install_kubectl
+
+      - name: kubeconfig 파일 설정
+        run: |
+          # 1. 시크릿에 저장된 kubeconfig 데이터를 파일로 저장
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" > ${{ github.workspace }}/kubeconfig.yaml
+          
+          # 2. KUBECONFIG 환경 변수를 설정하여 kubectl이 해당 파일을 사용하도록 지시
+          echo "KUBECONFIG=${{ github.workspace }}/kubeconfig.yaml" >> $GITHUB_ENV
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }} # 클러스터 연결 정보
+
+      # =======================================================
+      # 3단계: 쿠버네티스 배포
+      # =======================================================
+      - name: 배포 파일 이미지 태그 업데이트
+        # k8s/deployment.yaml 파일 내의 이미지 태그를 새로 빌드된 SHA 값으로 교체
+        run: |
+          IMAGE_TAG="${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          
+          # sed 명령을 사용하여 k8s/deployment.yaml 파일의 이미지 부분을 새 태그로 변경
+          sed -i "s|PLACEHOLDER_IMAGE_TAG|$IMAGE_TAG|g" k8s/deployment.yaml
+
+      - name: 쿠버네티스에 매니페스트 적용 (배포)
+        run: |
+          # 롤아웃 시퀀스를 보장하기 위해 deploy.yaml 먼저, service.yaml 나중에 적용
+          kubectl apply -f k8s/service.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f k8s/deployment.yaml -n ${{ env.K8S_NAMESPACE }}
