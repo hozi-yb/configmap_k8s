@@ -34,13 +34,9 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: 🔨 Docker 이미지 빌드 및 푸시
-        id: docker_build
-        uses: docker/build-and-push-action@v5
-        with:
-          context: . # Dockerfile이 프로젝트 루트에 있다고 가정
-          push: true
-          # 태그를 Git 커밋 SHA로 지정하여 버전 관리
-          tags: ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} 
+        run: |
+          docker build -t ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
+          docker push ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
           
       # =======================================================
       # 2단계: 쿠버네티스 접속 환경 설정
