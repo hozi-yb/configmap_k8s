@@ -36,7 +36,7 @@ spec:
       containers:
       - name: nginx
         # 컨테이너를 생성할 도커 이미지입니다. nginx의 1.10 버전을 사용하도록 지정했습니다.
-        image: nginx:1.10
+        image: nginx:latest
         ports:
         - containerPort: 80
 
