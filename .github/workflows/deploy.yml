@@ -41,34 +41,30 @@ jobs:
       # =======================================================
       # 2단계: 쿠버네티스 접속 환경 설정
       # =======================================================
-      - name: 📥 kubectl 설치 및 설정
-        uses: azure/setup-kubectl@v4
-      
-      - name: 🔐 kubeconfig 파일 생성
-        run: |
-          # Secrets에 저장된 kubeconfig 내용을 파일로 생성
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" > ${{ github.workspace }}/kubeconfig.yaml
-          # kubectl이 사용할 설정 파일 경로 지정
-          echo "KUBECONFIG=${{ github.workspace }}/kubeconfig.yaml" >> $GITHUB_ENV
+#      - name: 📥 kubectl 설치 및 설정
+#        uses: azure/setup-kubectl@v4
+#      
+#      - name: 🔐 kubeconfig 파일 생성
+#        run: |
+#          # Secrets에 저장된 kubeconfig 내용을 파일로 생성
+#          echo "${{ secrets.KUBE_CONFIG_DATA }}" > ${{ github.workspace }}/kubeconfig.yaml
+#          # kubectl이 사용할 설정 파일 경로 지정
+#          echo "KUBECONFIG=${{ github.workspace }}/kubeconfig.yaml" >> $GITHUB_ENV
 
       # =======================================================
       # 3단계: 배포 실행
       # =======================================================
-      - name: 🔄 배포 파일 이미지 태그 업데이트
-        run: |
-          # 1단계에서 생성된 이미지의 전체 태그 경로를 변수에 저장
-          IMAGE_TAG="${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          
-          # sed 명령을 사용하여 deployment.yaml 파일 내의 PLACEHOLDER_IMAGE_TAG 문자열을 실제 이미지 태그로 교체
-          sed -i "s|PLACEHOLDER_IMAGE_TAG|$IMAGE_TAG|g" ${{ env.K8S_FILE_PATH }}
-          
-          # 변경된 파일 내용 확인 (선택 사항)
-          echo "--- Updated YAML ---"
-          cat ${{ env.K8S_FILE_PATH }}
-          echo "--------------------"
+#      - name: 🔄 배포 파일 이미지 태그 업데이트
+#        run: |
+#          # 1단계에서 생성된 이미지의 전체 태그 경로를 변수에 저장
+#          IMAGE_TAG="${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+#          
+#          # sed 명령을 사용하여 deployment.yaml 파일 내의 PLACEHOLDER_IMAGE_TAG 문자열을 실제 이미지 태그로 교체
+#          sed -i "s|PLACEHOLDER_IMAGE_TAG|$IMAGE_TAG|g" ${{ env.K8S_FILE_PATH }}
+
 
       - name: ✅ 쿠버네티스에 배포 적용
         run: |
           # 변경된 deployment.yaml 파일을 클러스터에 적용
-          kubectl apply -f ${{ env.K8S_FILE_PATH }} -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f deployment-nginx.yaml -n my-nginx
           
